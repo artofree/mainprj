@@ -1,0 +1,50 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+.navbar-fixed-top, .navbar-right, .navbar-left, .dropdown-menu {
+    border: 0;
+    background: 0;
+}
+
+nav .form-control {
+    background: 0;
+    min-width: 300px;
+}
+
+html, body{
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Carousel base class */
+.carousel {
+    height: 100%;
+    background-color: #000000;
+
+}
+
+.carousel-inner {
+    height: 100%;
+}
+
+/* Since positioning the image, we need to help out the caption */
+.carousel-caption {
+    z-index: 10;
+}
+
+/* Declare heights because of positioning of img element */
+.carousel .item {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    background-color: red;
+    text-align: center
+}
+
+.carousel-inner > .item > img {
+    position: relative;
+    height: 100%;
+    width: 100%;
+}

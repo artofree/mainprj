@@ -2,6 +2,28 @@
 {% load staticfiles %}
 {% block title %}探索{% endblock %}
 
+{% block head %}
+<script src="{% static 'explore/js/gmap.js' %}"></script>
+<script>
+    var parms =[];
+    parms["lt"] ={{ lt }}
+    parms["ln"] ={{ ln }}
+    parms["zoom"] ={{ zoom }}
+    parms["pic"] ="/static/smalls/35284692.jpg";
+    parms["ne"] =0;
+    parms["sw"] =0;
+    parms["jsonurl"] ="{% url 'explore:getPhotos' %}"
+    parms["jsonurl"] ="{% url 'explore:getPhotos' %}"
+</script>
+<script src="{% static 'explore/js/index.js' %}"></script>
+{% endblock %}
+
 {% block cssload2 %}
-<link rel="stylesheet" type="text/css" href="{% static 'main/css/index.css' %}"/>
+<link rel="stylesheet" type="text/css" href="{% static 'explore/css/index.css' %}"/>
+{% endblock %}
+
+{% block maincontent %}
+<div id="explore-index-maindiv">
+    <div id="map-canvas"></div>
+</div>
 {% endblock %}

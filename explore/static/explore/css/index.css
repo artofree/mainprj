@@ -1,0 +1,29 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html, body{
+    height: 100%;
+    overflow: hidden;
+}
+
+#explore-index-maindiv {
+    border-style: solid;
+    border-width: 1px;
+    border-color: #ffff00;
+
+    height: 100%;
+    margin-top: 45px;
+}
+
+
+#map-canvas{
+    border-style: solid;
+    border-width: 1px;
+    border-color: #ffff00;
+
+    height: 100%;
+    margin: 0px;
+    padding: 0px
+}

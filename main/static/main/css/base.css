@@ -29,7 +29,10 @@ body {
 /* Not required for template or sticky footer method. */
 
 #wrap > .container {
-  padding: 60px 15px 0;
+  padding: 0px 0px 0;
+}
+#wrap > .container{
+  margin-top: 60px;
 }
 .container .text-muted {
   margin: 20px 0;

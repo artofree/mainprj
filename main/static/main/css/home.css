@@ -8,11 +8,6 @@
     background: 0;
 }
 
-nav .form-control {
-    background: 0;
-    min-width: 300px;
-}
-
 html, body{
     height: 100%;
     overflow: hidden;

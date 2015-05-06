@@ -49,6 +49,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
 )
 
 ROOT_URLCONF = 'mainprj.urls'
@@ -96,3 +97,10 @@ STATICFILES_DIRS = (
 
 
 TEMPLATE_DIRS = [os.path.join(BASE_DIR, 'templates')]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+    }
+}

@@ -7,7 +7,7 @@ import os, sys
 import random ,codecs
 
 photoPath =r"/Users/guopeng/Documents/panoramio/photos"
-resultpath =r"/Users/guopeng/Documents/panoramio/15"
+resultpath =r"/Users/guopeng/Documents/panoramio/1"
 
 def createphoto():
     dList =[]
@@ -16,7 +16,7 @@ def createphoto():
         tList =[line.strip('\n') for line in f.readlines()]
     resultList =[x.split('||') for x in tList]
     for x in resultList:
-        if len(x) <15:
+        if len(x) <16:
             dList.append(x)
     for x in dList:
         resultList.remove(x)
@@ -39,6 +39,18 @@ def createphoto():
             thePhoto =photo()
             thePhoto.testid =photoInfo[0]
             thePhoto.user =theUser
+            thePhoto.file =" "
+            thePhoto.filename =" "
+            thePhoto.lt =float(photoInfo[4])
+            thePhoto.ltc =photoInfo[5]
+            thePhoto.ln =float(photoInfo[6])
+            thePhoto.lnc =photoInfo[7]
+            thePhoto.lable =1
+            thePhoto.looks =photoInfo[12]
+            thePhoto.likes =photoInfo[13]
+            thePhoto.favorites =photoInfo[14]
+            thePhoto.comments =photoInfo[15]
+            thePhoto.save()
 
 
 
@@ -56,6 +68,5 @@ def createphoto():
 
 
 
-
-#>>> from thetest.createqc import createqcs
-#>>> createqcs()
+#>>> from func.filldb import createphoto
+#>>> createphoto()

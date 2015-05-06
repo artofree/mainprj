@@ -11,4 +11,6 @@ urlpatterns = patterns('',
     url(r'^explore/', include('explore.urls', namespace="explore")),
     url(r'^main/', include('main.urls', namespace="main")),
     url(r'^admin/', include(admin.site.urls)),
+    #url(r'^photo/small/(?P<photofile>\d+).jpg$', 'main.views.getsmallphoto', name='getsmallphoto'),
+    url(r'^photolayer/(?P<zoom>(\d){1,2}),(?P<tilex>(\d)+),(?P<tiley>(\d)+).jpg$', 'explore.views.getphotolayer', name='getphotolayer'),
 )

@@ -4,26 +4,22 @@ from django.shortcuts import render
 from django.http import HttpResponse ,HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.http import JsonResponse
+from main.models import userinfo ,photo
+import utility.photoDistribute as pd
+from PIL import Image
+try:
+    import cStringIO as StringIO
+except ImportError: # 导入失败会捕获到ImportError
+    import StringIO
 
-class Student(object):
+photoSet =set()
+rootCell =pd.cell(pd.ltlnrect(0 ,0 ,0 ,0 ,0) ,pd.cellphoto(photo.objects.get(id=1)) ,None)
+photoSet.add(1)
+for x in photo.objects.all():
+    if x.id not in photoSet:
+        photoSet.add(x.id)
+        rootCell.addphoto(pd.cellphoto(x))
 
-    def __init__(self, name, score):
-        self.name = name
-        self.score = score
-
-    def print_score(self):
-        return self.name +str(self.score)
-
-    def get_grade(self):
-        if self.score >= 90:
-            return 'A'
-        elif self.score >= 60:
-            return 'B'
-        else:
-            return 'C'
-
-
-theStudent =Student('Bart Simpson', 59)
 
 # Create your views here.
 def index(request ,rqst):
@@ -42,12 +38,53 @@ def index(request ,rqst):
 def rdrct(request):
     #return  HttpResponse(rqst)
     #return render(request, 'explore/index.html')
-    return HttpResponseRedirect(reverse('explore:index', args=('20.967361,-33.000000,3',)))
+    return HttpResponseRedirect(reverse('explore:index', args=('43.648614,104.68,5',)))
 
 def getPhotos(request):
-    nelt =request.GET['nelt']
-    neln =request.GET['neln']
-    swlt =request.GET['swlt']
-    swln =request.GET['swln']
-    thePhoto =[['/static/smalls/35284692.jpg' ,(float(nelt) +float(swlt))/2 ,(float(neln) +float(swln))/2]]
-    return JsonResponse(thePhoto ,safe=False)
+    nelt =float(request.GET['nelt'])
+    neln =float(request.GET['neln'])
+    swlt =float(request.GET['swlt'])
+    swln =float(request.GET['swln'])
+    zoom =int(request.GET['zoom'])
+    bigSet =set()
+    smallSet =set()
+    bigUrl ='/static/smalls/'
+    smallUrl ='/static/tinis/'
+    #bigUrl ='/photo/small/'
+    #smallUrl ='/photo/tiny/'
+    fileTail ='.jpg'
+    bigPhotos =[]
+    smallPhotos =[]
+
+    pd.choosePhotos(rootCell ,nelt ,swlt ,neln ,swln ,zoom ,bigSet ,smallSet)
+    for cell in bigSet:
+        bigPhotos.append([bigUrl +str(cell.cphoto.testid) +fileTail ,cell.cphoto.lt ,cell.cphoto.ln])
+    for cell in smallSet:
+        smallPhotos.append([smallUrl +str(cell.cphoto.testid) +fileTail ,cell.cphoto.lt ,cell.cphoto.ln])
+
+    thePhotos =[bigPhotos ,smallPhotos]
+    return JsonResponse(thePhotos ,safe=False)
+
+def getphotolayer(request ,zoom ,tilex ,tiley):
+    photolist =[]
+    pd.getTilePhoto(rootCell ,int(zoom) ,int(tilex) ,int(tiley) ,photolist)
+    i =0
+    theTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
+    for thePhoto in reversed(photolist):
+        im = Image.open(thePhoto[0])
+        theTile.paste(im ,(thePhoto[7] ,thePhoto[8] ,thePhoto[7] +2*thePhoto[9] ,thePhoto[8] +2*thePhoto[9]))
+    photoStream =StringIO.StringIO()
+    theTile.save(photoStream ,"PNG")
+    return HttpResponse(photoStream.getvalue(),"image/png")
+
+
+
+
+
+
+
+
+
+
+
+

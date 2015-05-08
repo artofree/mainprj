@@ -3,7 +3,41 @@ var map;
 var isNeedHistory = true;
 ///记录已请求过的
 
-///
+///接收推送,并按层-》tile-》rect方式组织
+var allLayer = [];
+var source = new EventSource("/getTilesInfo/");
+source.onmessage = function (event) {
+    var data = JSON.parse(event.data);
+    for (var i = 0; i < data.length; i++) {
+        ret =data[i];
+        if (allLayer[ret["zoom"]] === undefined) {
+            var layer = [];
+            allLayer[ret["zoom"]] = layer;
+        }
+        var theLayer = allLayer[ret["zoom"]];
+        for (var i = 0; i < theLayer.length; i++) {
+            if (theLayer[i]["x"] == ret["x"] && theLayer[i]["y"] == ret["y"])
+                return;
+        }
+        var theTile = [];
+        theTile["x"] = ret["x"];
+        theTile["y"] = ret["y"];
+        var nepoint = new google.maps.LatLng(Number(ret["nelt"]), Number(ret["neln"]));
+        var swpoint = new google.maps.LatLng(Number(ret["swlt"]), Number(ret["swln"]));
+        theTile["rect"] = new google.maps.LatLngBounds(swpoint, nepoint);
+        var elements = ret["elements"];
+        for (var i = 0; i < elements.length; i++) {
+            var theElement = [];
+            theElement["photoid"] = elements[i][0];
+            var nepoint = new google.maps.LatLng(Number(elements[i][1]), Number(elements[i][2]));
+            var swpoint = new google.maps.LatLng(Number(elements[i][3]), Number(elements[i][4]));
+            theElement["rect"] = new google.maps.LatLngBounds(swpoint, nepoint);
+            theElement["point"] = new google.maps.LatLng(Number(elements[i][5]), Number(elements[i][6]));
+            theTile.push(theElement);
+        }
+        theLayer.push(theTile);
+    }
+};
 function getNormalizedCoord(coord, zoom) {
     var y = coord.y;
     var x = coord.x;

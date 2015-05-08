@@ -121,16 +121,27 @@ class cell(object):
         if deepStep ==0:
             return self
         else:
-            index =-1
             bound =int(math.pow(2 ,deepStep -1))
             if tilex <bound and tiley <bound:
-                return self.childs[1].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                if self.childs[1]:
+                    return self.childs[1].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                else:
+                    return self
             elif tilex <bound and tiley >=bound:
-                return self.childs[2].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                if self.childs[2]:
+                    return self.childs[2].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                else:
+                    return self
             elif tilex >=bound and tiley >=bound:
-                return self.childs[3].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                if self.childs[3]:
+                    return self.childs[3].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                else:
+                    return self
             else:
-                return self.childs[0].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                if self.childs[0]:
+                    return self.childs[0].findCell(tilex %bound ,tiley %bound ,deepStep -1)
+                else:
+                    return self
 
     #寻找参数点与本点的最近父节点：
     def findRecentParent(self ,desCell):
@@ -244,50 +255,68 @@ tinyPath ='/Users/guopeng/Documents/panoramio/tinis/'
 smallhalfsize =32
 tinyhalfsize =8
 
-def getPhotoInfo(desCell ,theCell ,path ,halfsize ,zoom):
+def getPhotoInfo(desCell ,tnrect ,path ,halfsize ,zoom):
     url =path +str(desCell.cphoto.testid) +'.jpg'
 
     nelt =py2lt(lt2py(desCell.cphoto.lt) -halfsize/math.pow(2 ,zoom))
     neln =desCell.cphoto.ln +halfsize *lnperpx(zoom)
     swlt =py2lt(lt2py(desCell.cphoto.lt) +halfsize/math.pow(2 ,zoom))
     swln =desCell.cphoto.ln -halfsize *lnperpx(zoom)
-    if nelt >theCell.tnrect.nelt:
-        nelt =theCell.tnrect.nelt
-        swlt -=(nelt -theCell.tnrect.nelt)
-    if neln >theCell.tnrect.neln:
-        neln =theCell.tnrect.neln
-        swln -=(neln -theCell.tnrect.neln)
-    if swlt <theCell.tnrect.swlt:
-        swlt =theCell.tnrect.swlt
-        nelt +=(theCell.tnrect.swlt -swlt)
-    if swln <theCell.tnrect.swln:
-        swln =theCell.tnrect.swln
-        neln +=(theCell.tnrect.swln -swln)
-    left =int((swln -theCell.tnrect.swln)/360 *256 *math.pow(2 ,zoom))
-    top =int((lt2py(nelt) -lt2py(theCell.tnrect.nelt))*math.pow(2 ,zoom))
-    if left +halfsize *2 >256:
-        left =256 -halfsize *2 -1
-    if top +halfsize *2 >256:
-        top =256 -halfsize *2 -1
-    return [url ,desCell.cphoto.lt ,desCell.cphoto.ln ,nelt ,neln ,swlt ,swln ,left ,top ,halfsize]
+    if nelt >tnrect.nelt:
+        movestep =lt2py(tnrect.nelt) -lt2py(nelt)
+        nelt =tnrect.nelt
+        swlt =py2lt(lt2py(swlt) +movestep)
+    if neln >tnrect.neln:
+        swln -=(neln -tnrect.neln)
+        neln =tnrect.neln
+    if swlt <tnrect.swlt:
+        movestep =lt2py(swlt) -lt2py(tnrect.swlt)
+        swlt =tnrect.swlt
+        nelt =py2lt(lt2py(nelt) -movestep)
+    if swln <tnrect.swln:
+        neln +=(tnrect.swln -swln)
+        swln =tnrect.swln
+    left =int((swln -tnrect.swln)/360 *256 *math.pow(2 ,zoom))
+    top =int((lt2py(nelt) -lt2py(tnrect.nelt))*math.pow(2 ,zoom))
+    # if left +halfsize *2 >256:
+    #     left =256 -halfsize *2 -1
+    # if top +halfsize *2 >256:
+    #     top =256 -halfsize *2 -1
+    return [url ,desCell.cphoto.lt ,desCell.cphoto.ln ,nelt ,neln ,swlt ,swln ,left ,top ,halfsize ,desCell.cphoto.testid]
+
+def makeRect(zoom ,tilex ,tiley):
+    bound =math.pow(2 ,zoom)
+    left =tilex *256 /bound
+    top =tiley *256 /bound
+    right =(tilex +1)*256/bound
+    bottom =(tiley +1)*256/bound
+    return ltlnrect(py2lt(top) ,py2lt(bottom) ,px2ln(right) ,px2ln(left))
 
 def getTilePhoto(rootCell ,zoom ,tilex ,tiley ,photoList):
     #找到该tile对应的cell
     theCell =rootCell.findCell(tilex ,tiley ,zoom)
+    theRect =theCell.tnrect
+    if theCell.deep !=zoom:
+        theRect =makeRect(zoom ,tilex ,tiley)
     #向上找有木有落在该cell的父节点
     #每个tile只有一个大图，其将占据zoom+2层的某整个cell，并遮挡其后一切元素，即其后的一切小图皆不再计算
-    theList =[theCell]
+    theList =[]
+    if theRect.ptInRect(theCell.cphoto.lt ,theCell.cphoto.ln):
+        theList.append(theCell)
     theParent =theCell.parent
     while(theParent):
-        if theCell.tnrect.ptInRect(theParent.cphoto.lt ,theParent.cphoto.ln):
+        if theRect.ptInRect(theParent.cphoto.lt ,theParent.cphoto.ln):
             theList.append(theParent)
         theParent =theParent.parent
     theList.reverse()
     #小图针对zoom +4级别，既zoom+3以上所有
-    theCell.getAllCell(zoom +3 ,theList)
-    photoList.append(getPhotoInfo(theList[0] ,theCell ,smallPath ,smallhalfsize ,zoom))
-    for x in theList[1:]:
-        photoList.append(getPhotoInfo(x ,theCell ,tinyPath ,tinyhalfsize ,zoom))
+    if theCell.deep ==zoom:
+        theCell.getAllCell(zoom +3 ,theList)
+    if theList:
+        photoList.append(getPhotoInfo(theList[0] ,theRect ,smallPath ,smallhalfsize ,zoom))
+    if len(theList) >1:
+        for x in theList[1:]:
+            photoList.append(getPhotoInfo(x ,theRect ,tinyPath ,tinyhalfsize ,zoom))
 
 
 

@@ -11,6 +11,7 @@ try:
     import cStringIO as StringIO
 except ImportError: # 导入失败会捕获到ImportError
     import StringIO
+import json
 
 photoSet =set()
 rootCell =pd.cell(pd.ltlnrect(0 ,0 ,0 ,0 ,0) ,pd.cellphoto(photo.objects.get(id=1)) ,None)
@@ -65,10 +66,51 @@ def getPhotos(request):
     thePhotos =[bigPhotos ,smallPhotos]
     return JsonResponse(thePhotos ,safe=False)
 
+
+blankTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
+blankStream =StringIO.StringIO()
+blankTile.save(blankStream ,"PNG")
+tilesInfo =list()
+# def getTilesInfo(request):
+#     data = json.dumps(theRsp["elements"])
+#     #response =HttpResponse('data: %s\n\n' % data,content_type='text/event-stream')
+#     response =HttpResponse('data: 123\n\n',content_type='text/event-stream')
+#     response['Cache-Control'] = 'no-cache'
+#     return response
+def getTilesInfo(request):
+    if len(tilesInfo):
+        data = json.dumps(tilesInfo)
+        del tilesInfo[:]
+        return HttpResponse('data:%s\n\nretry:1000\n' % data,content_type='text/event-stream')
+    # if len(tilesInfo):
+    #     data = json.dumps(tilesInfo)
+    #     tilesInfo =[]
+    #     #return HttpResponse('data:%s\n\n' % data,content_type='text/event-stream')
+    #     return HttpResponse('data:123123123\n\n',content_type='text/event-stream')
+
 def getphotolayer(request ,zoom ,tilex ,tiley):
     photolist =[]
     pd.getTilePhoto(rootCell ,int(zoom) ,int(tilex) ,int(tiley) ,photolist)
-    i =0
+    if not photolist:
+        return HttpResponse(blankStream.getvalue(),"image/png")
+
+    #推送tile信息：
+    theRsp =dict()
+    theRect =pd.makeRect(int(zoom) ,int(tilex) ,int(tiley))
+    theRsp["zoom"] =zoom
+    theRsp["x"] =tilex
+    theRsp["y"] =tiley
+    theRsp["nelt"] =theRect.nelt
+    theRsp["neln"] =theRect.neln
+    theRsp["swlt"] =theRect.swlt
+    theRsp["swln"] =theRect.swln
+    theElements =[]
+    for thePhoto in photolist:
+        theElements.append([thePhoto[10] ,thePhoto[3] ,thePhoto[4] ,thePhoto[5] ,thePhoto[6] ,thePhoto[1] ,thePhoto[2]])
+    theRsp["elements"] =theElements
+    tilesInfo.append(theRsp)
+
+    #整合图片并返回
     theTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
     for thePhoto in reversed(photolist):
         im = Image.open(thePhoto[0])
@@ -76,6 +118,7 @@ def getphotolayer(request ,zoom ,tilex ,tiley):
     photoStream =StringIO.StringIO()
     theTile.save(photoStream ,"PNG")
     return HttpResponse(photoStream.getvalue(),"image/png")
+
 
 
 

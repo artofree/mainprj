@@ -31,6 +31,7 @@ def createphoto():
     for x in resultList:
         theDict[x[0]] =x
     photoList =[os.path.splitext(x)[0] for x in os.listdir(photoPath)]
+    photoList =photoList[:1000]
     for x in photoList:
         if theDict.has_key(x):
             #写数据库:
@@ -39,8 +40,8 @@ def createphoto():
             thePhoto =photo()
             thePhoto.testid =photoInfo[0]
             thePhoto.user =theUser
-            thePhoto.file =" "
-            thePhoto.filename =" "
+            thePhoto.file ="1"
+            thePhoto.filename ="1"
             thePhoto.lt =float(photoInfo[4])
             thePhoto.ltc =photoInfo[5]
             thePhoto.ln =float(photoInfo[6])

@@ -70,23 +70,22 @@ def getPhotos(request):
 blankTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
 blankStream =StringIO.StringIO()
 blankTile.save(blankStream ,"PNG")
-tilesInfo =list()
-# def getTilesInfo(request):
-#     data = json.dumps(theRsp["elements"])
-#     #response =HttpResponse('data: %s\n\n' % data,content_type='text/event-stream')
-#     response =HttpResponse('data: 123\n\n',content_type='text/event-stream')
-#     response['Cache-Control'] = 'no-cache'
-#     return response
+tilesInfo =[]
+
+def getPhotoInfo(request):
+    pass
+
 def getTilesInfo(request):
-    if len(tilesInfo):
+    global tilesInfo
+    if len(tilesInfo) >0:
         data = json.dumps(tilesInfo)
-        del tilesInfo[:]
-        return HttpResponse('data:%s\n\nretry:1000\n' % data,content_type='text/event-stream')
-    # if len(tilesInfo):
-    #     data = json.dumps(tilesInfo)
-    #     tilesInfo =[]
-    #     #return HttpResponse('data:%s\n\n' % data,content_type='text/event-stream')
-    #     return HttpResponse('data:123123123\n\n',content_type='text/event-stream')
+        tilesInfo =[]
+        #del tilesInfo[:]
+        response =HttpResponse('data:%s\n\nretry:1000\n' % data,content_type='text/event-stream')
+        response['Cache-Control'] = 'no-cache'
+        return response
+    else:
+        return HttpResponse('data:\n\nretry:1000\n',content_type='text/event-stream')
 
 def getphotolayer(request ,zoom ,tilex ,tiley):
     photolist =[]

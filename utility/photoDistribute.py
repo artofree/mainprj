@@ -3,6 +3,10 @@
 import math
 from coordChange import ln2px ,lt2py ,px2ln ,py2lt ,ltperpx ,lnperpx
 
+class tilesInfo(object):
+    def __init__(self ,infoList):
+        self.infoList =infoList
+
 class ltlnrect(object):
     def __init__(self, nelt, swlt ,neln ,swln ,tag =1):
         if tag:
@@ -282,7 +286,7 @@ def getPhotoInfo(desCell ,tnrect ,path ,halfsize ,zoom):
     #     left =256 -halfsize *2 -1
     # if top +halfsize *2 >256:
     #     top =256 -halfsize *2 -1
-    return [url ,desCell.cphoto.lt ,desCell.cphoto.ln ,nelt ,neln ,swlt ,swln ,left ,top ,halfsize ,desCell.cphoto.testid]
+    return [url ,desCell.cphoto.lt ,desCell.cphoto.ln ,nelt ,neln ,swlt ,swln ,left ,top ,halfsize ,desCell.cphoto.testid ,desCell.cphoto.oriscore]
 
 def makeRect(zoom ,tilex ,tiley):
     bound =math.pow(2 ,zoom)

@@ -6,44 +6,13 @@ var isNeedHistory = true;
 ///记录已请求过的
 ///当前点击将触发的图片信息
 var nowPhoto = null;
+///弹出框，全局只有一个
 var infowindow = null;
-var rightPhotos = [];
 ///接收推送,并按层-》tile-》rect方式组织
 var allLayer = [];
-var source = new EventSource("/getTilesInfo/");
-source.onmessage = function (event) {
-    if (event.data == "")
-        return;
-    var data = JSON.parse(event.data);
-    for (var i1 = 0; i1 < data.length; i1++) {
-        var ret = data[i1];
-        if (allLayer[Number(ret["zoom"])] === undefined) {
-            allLayer[Number(ret["zoom"])] = [];
-        }
-        var theLayer = allLayer[Number(ret["zoom"])];
-        for (var i2 = 0; i2 < theLayer.length; i2++) {
-            if (theLayer[i2]["x"] == Number(ret["x"]) && theLayer[i2]["y"] == Number(ret["y"]))
-                return;
-        }
-        var theTile = [];
-        theTile["x"] = Number(ret["x"]);
-        theTile["y"] = Number(ret["y"]);
-        var nepoint1 = new google.maps.LatLng(Number(ret["nelt"]), Number(ret["neln"]));
-        var swpoint1 = new google.maps.LatLng(Number(ret["swlt"]), Number(ret["swln"]));
-        theTile["rect"] = new google.maps.LatLngBounds(swpoint1, nepoint1);
-        var elements = ret["elements"];
-        for (var i = 0; i < elements.length; i++) {
-            var theElement = [];
-            theElement["photoid"] = elements[i][0];
-            var nepoint = new google.maps.LatLng(Number(elements[i][1]), Number(elements[i][2]));
-            var swpoint = new google.maps.LatLng(Number(elements[i][3]), Number(elements[i][4]));
-            theElement["rect"] = new google.maps.LatLngBounds(swpoint, nepoint);
-            theElement["point"] = new google.maps.LatLng(Number(elements[i][5]), Number(elements[i][6]));
-            theTile.push(theElement);
-        }
-        theLayer.push(theTile);
-    }
-};
+///右侧图片
+var rightPhotos = [];
+
 function getNormalizedCoord(coord, zoom) {
     var y = coord.y;
     var x = coord.x;
@@ -79,32 +48,64 @@ CoordMapType.prototype.getTile = function (coord, zoom, ownerDocument) {
     //div.innerHTML = '<img src="/static/test.png" width="256" height="256" />';
     div.style.borderStyle = 'hidden';
 
-    ///请求tile信息：
-    //$.getJSON(parms.jsonurl, {
-    //    'x': normalizedCoord.x,
-    //    'y': normalizedCoord.y,
-    //    'zoom': map.getZoom()
-    //}, function (ret) {
-    //    //返回值 ret 在这里是一个列表
-    //    //for(var index =0 ;index <ret.length ;index ++) {
-    //    var bigPhotos = ret;
-    //});
+    ///如果alllayer里没有这个tile
+    var isInAllLayer = false;
+    if (allLayer[zoom] != undefined) {
+        var theLayer = allLayer[zoom];
+        for (var i1 = 0; i1 < theLayer.length; i1++) {
+            if (theLayer[i1]["x"] == normalizedCoord.x && theLayer[i1]["y"] == normalizedCoord.y) {
+                isInAllLayer = true;
+                break;
+            }
+        }
+    }
+    if (!isInAllLayer) {
+        ///请求tile内容信息：
+        $.getJSON(parms.jsonurl, {
+            'x': normalizedCoord.x,
+            'y': normalizedCoord.y,
+            'zoom': zoom
+        }, function (ret) {
+            if (allLayer[Number(ret["zoom"])] === undefined) {
+                allLayer[Number(ret["zoom"])] = [];
+            }
+            var theLayer = allLayer[Number(ret["zoom"])];
+            var theTile = [];
+            theTile["x"] = Number(ret["x"]);
+            theTile["y"] = Number(ret["y"]);
+            var nepoint1 = new google.maps.LatLng(Number(ret["nelt"]), Number(ret["neln"]));
+            var swpoint1 = new google.maps.LatLng(Number(ret["swlt"]), Number(ret["swln"]));
+            theTile["rect"] = new google.maps.LatLngBounds(swpoint1, nepoint1);
+            var elements = ret["elements"];
+            for (var i = 0; i < elements.length; i++) {
+                var theElement = [];
+                theElement["photoid"] = elements[i][0];
+                theElement["id"] = elements[i][7];
+                var nepoint = new google.maps.LatLng(Number(elements[i][1]), Number(elements[i][2]));
+                var swpoint = new google.maps.LatLng(Number(elements[i][3]), Number(elements[i][4]));
+                theElement["rect"] = new google.maps.LatLngBounds(swpoint, nepoint);
+                theElement["point"] = new google.maps.LatLng(Number(elements[i][5]), Number(elements[i][6]));
+                theTile.push(theElement);
+            }
+            theLayer.push(theTile);
+        });
+    }
 
     return div;
 };
 
 CoordMapType.prototype.releaseTile = function (node) {
-    var zoom = map.getZoom();
-    var tilex = node.Aa.x;
-    var tiley = node.Aa.y;
-    var theLayer = allLayer[zoom];
-    if (theLayer != undefined) {
-        for (var item in theLayer) {
-            if (theLayer[item]["x"] == tilex && theLayer[item]["y"] == tiley) {
-                theLayer.splice(item, 1);
-            }
-        }
-    }
+    //var zoom = map.getZoom();
+    //var tilex = node.Aa.x;
+    //var tiley = node.Aa.y;
+    //var theLayer = allLayer[zoom];
+    //if (theLayer != undefined) {
+    //    for (var item in theLayer) {
+    //        if (theLayer[item]["x"] == tilex && theLayer[item]["y"] == tiley) {
+    //            theLayer.splice(item, 1);
+    //        }
+    //    }
+    //}
 };
 
 function initialize() {
@@ -119,6 +120,7 @@ function initialize() {
             mapTypeIds: ['moon']
         }
     };
+    allLayer[parms.zoom] = [];
     map = new google.maps.Map(document.getElementById('map-canvas'),
         mapOptions);
     map.overlayMapTypes.insertAt(
@@ -126,7 +128,7 @@ function initialize() {
 
     ///zoomchange:
     google.maps.event.addListener(map, 'zoom_changed', function () {
-        //allLayer = [];
+
     });
     ///监听鼠标点击，从nowphoto里获得并呈现
     google.maps.event.addListener(map, 'click', function (event) {
@@ -184,6 +186,25 @@ function initialize() {
                 map.setOptions({draggableCursor: 'default'});
             }
         }
+    });
+    ///获得右栏图片列表
+    google.maps.event.addListener(map, 'idle', function () {
+        var mapBounds = map.getBounds();
+        var ne = mapBounds.getNorthEast();
+        var sw = mapBounds.getSouthWest();
+        ///请求该区域当前zoom下的图片内容：
+        rightPhotos = [];
+        $.getJSON(parms.plisturl, {
+            'nelt': ne.lat(),
+            'neln': ne.lng(),
+            'swlt': sw.lat(),
+            'swln': sw.lng(),
+            'zoom': map.getZoom()
+        }, function (ret) {
+            //返回值 ret 在这里是一个列表
+            rightPhotos = ret;
+            var i =0;
+        })
     });
 
     ///存储状态

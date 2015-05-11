@@ -12,7 +12,10 @@ try:
 except ImportError: # 导入失败会捕获到ImportError
     import StringIO
 import json
+import thread
+streamLock = thread.allocate_lock()
 
+#初始化全球图片树
 photoSet =set()
 rootCell =pd.cell(pd.ltlnrect(0 ,0 ,0 ,0 ,0) ,pd.cellphoto(photo.objects.get(id=1)) ,None)
 photoSet.add(1)
@@ -41,59 +44,66 @@ def rdrct(request):
     #return render(request, 'explore/index.html')
     return HttpResponseRedirect(reverse('explore:index', args=('43.648614,104.68,5',)))
 
-def getPhotos(request):
-    nelt =float(request.GET['nelt'])
-    neln =float(request.GET['neln'])
-    swlt =float(request.GET['swlt'])
-    swln =float(request.GET['swln'])
-    zoom =int(request.GET['zoom'])
-    bigSet =set()
-    smallSet =set()
-    bigUrl ='/static/smalls/'
-    smallUrl ='/static/tinis/'
-    #bigUrl ='/photo/small/'
-    #smallUrl ='/photo/tiny/'
-    fileTail ='.jpg'
-    bigPhotos =[]
-    smallPhotos =[]
-
-    pd.choosePhotos(rootCell ,nelt ,swlt ,neln ,swln ,zoom ,bigSet ,smallSet)
-    for cell in bigSet:
-        bigPhotos.append([bigUrl +str(cell.cphoto.testid) +fileTail ,cell.cphoto.lt ,cell.cphoto.ln])
-    for cell in smallSet:
-        smallPhotos.append([smallUrl +str(cell.cphoto.testid) +fileTail ,cell.cphoto.lt ,cell.cphoto.ln])
-
-    thePhotos =[bigPhotos ,smallPhotos]
-    return JsonResponse(thePhotos ,safe=False)
-
-
-blankTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
+tilesContentInfo =dict()
 blankStream =StringIO.StringIO()
+blankTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
 blankTile.save(blankStream ,"PNG")
-tilesInfo =[]
+allTileImages =[blankStream]
 
+#获得tile里的cell图片信息
 def getPhotoInfo(request):
-    pass
-
-def getTilesInfo(request):
-    global tilesInfo
-    if len(tilesInfo) >0:
-        data = json.dumps(tilesInfo)
-        tilesInfo =[]
-        #del tilesInfo[:]
-        response =HttpResponse('data:%s\n\nretry:1000\n' % data,content_type='text/event-stream')
-        response['Cache-Control'] = 'no-cache'
-        return response
+    zoom =request.GET['zoom']
+    tilex =request.GET['x']
+    tiley =request.GET['y']
+    strKey =zoom +',' +tilex  +',' +tiley
+    if not tilesContentInfo.has_key(strKey):
+        makeContent(zoom ,tilex ,tiley)
+    theTileInfo =tilesContentInfo[strKey]
+    if theTileInfo[0] ==0:
+        theRsp =dict()
+        theRsp["zoom"] =zoom
+        theRsp["x"] =tilex
+        theRsp["y"] =tiley
+        theRsp["nelt"] =0.0
+        theRsp["neln"] =0.0
+        theRsp["swlt"] =0.0
+        theRsp["swln"] =0.0
+        theRsp["elements"] =[]
+        return JsonResponse(theRsp)
     else:
-        return HttpResponse('data:\n\nretry:1000\n',content_type='text/event-stream')
+        return JsonResponse(theTileInfo[1])
 
+#获得tile整合图片本身
 def getphotolayer(request ,zoom ,tilex ,tiley):
+    strKey =zoom +',' +tilex  +',' +tiley
+    if not tilesContentInfo.has_key(strKey):
+        makeContent(zoom ,tilex ,tiley)
+    theTileInfo =tilesContentInfo[strKey]
+    theIo =allTileImages[theTileInfo[0]]
+    return HttpResponse(theIo.getvalue(),"image/png")
+
+def makeContent(zoom ,tilex ,tiley):
+    strKey =zoom +',' +tilex  +',' +tiley
     photolist =[]
     pd.getTilePhoto(rootCell ,int(zoom) ,int(tilex) ,int(tiley) ,photolist)
-    if not photolist:
-        return HttpResponse(blankStream.getvalue(),"image/png")
 
-    #推送tile信息：
+    #将空图片加入该tile信息
+    if not photolist:
+        tilesContentInfo[strKey] =[0]
+        return
+
+    #整合图片并置入流
+    theTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
+    for thePhoto in reversed(photolist):
+        im = Image.open(thePhoto[0])
+        theTile.paste(im ,(thePhoto[7] ,thePhoto[8] ,thePhoto[7] +2*thePhoto[9] ,thePhoto[8] +2*thePhoto[9]))
+
+    theStream =StringIO.StringIO()
+    theTile.save(theStream ,"PNG")
+    allTileImages.append(theStream)
+    theLen =len(allTileImages)
+
+    #tile信息置入
     theRsp =dict()
     theRect =pd.makeRect(int(zoom) ,int(tilex) ,int(tiley))
     theRsp["zoom"] =zoom
@@ -105,18 +115,51 @@ def getphotolayer(request ,zoom ,tilex ,tiley):
     theRsp["swln"] =theRect.swln
     theElements =[]
     for thePhoto in photolist:
-        theElements.append([thePhoto[10] ,thePhoto[3] ,thePhoto[4] ,thePhoto[5] ,thePhoto[6] ,thePhoto[1] ,thePhoto[2]])
+        theElements.append([thePhoto[10] ,thePhoto[3] ,thePhoto[4] ,thePhoto[5] ,thePhoto[6] ,thePhoto[1] ,thePhoto[2] ,thePhoto[12]])
     theRsp["elements"] =theElements
-    tilesInfo.append(theRsp)
+    tilesContentInfo[strKey] =[theLen -1 ,theRsp]
 
-    #整合图片并返回
-    theTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
-    for thePhoto in reversed(photolist):
-        im = Image.open(thePhoto[0])
-        theTile.paste(im ,(thePhoto[7] ,thePhoto[8] ,thePhoto[7] +2*thePhoto[9] ,thePhoto[8] +2*thePhoto[9]))
-    photoStream =StringIO.StringIO()
-    theTile.save(photoStream ,"PNG")
-    return HttpResponse(photoStream.getvalue(),"image/png")
+#获得右栏区域照片列表，既当前bound下广度优先遍历的所有照片
+def getPhotoList(request):
+    nelt =float(request.GET['nelt'])
+    neln =float(request.GET['neln'])
+    swlt =float(request.GET['swlt'])
+    swln =float(request.GET['swln'])
+    zoom =int(request.GET['zoom'])
+
+    photoList =[]
+    if swln >neln:
+        pd.choosePhotos(rootCell ,nelt ,swlt ,180.0 ,swln ,zoom ,photoList)
+        pd.choosePhotos(rootCell ,nelt ,swlt ,neln ,-180.0 ,zoom ,photoList)
+    else:
+        pd.choosePhotos(rootCell ,nelt ,swlt ,neln ,swln ,zoom ,photoList)
+
+    photoList.sort(key=lambda col:(col[2]))
+    return JsonResponse(photoList ,safe=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

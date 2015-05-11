@@ -241,18 +241,6 @@ def selectPhotos(rootCell ,nelt, swlt ,neln ,swln ,zoom):
     parentCell.getDeepAllCell(zoom ,bigList)
 
 
-#简化：主节点到基本层以上所有节点全部返回
-def choosePhotos(rootCell ,nelt, swlt ,neln ,swln ,zoom ,bigSet ,smallSet):
-    desRect =ltlnrect(nelt, swlt ,neln ,swln)
-    parentCell =rootCell.findFitCell(desRect)
-    parentCell.getDeepAllCell(zoom -1 ,bigSet)
-    listOut =[theCell for theCell in bigSet if not desRect.ptInRect(theCell.cphoto.lt ,theCell.cphoto.ln)]
-    bigSet -=set(listOut)
-    parentCell.getDeepAllCell(zoom +2 ,smallSet)
-    listOut =[theCell for theCell in smallSet if not desRect.ptInRect(theCell.cphoto.lt ,theCell.cphoto.ln)]
-    smallSet -=set(listOut)
-    smallSet -=bigSet
-
 #tiles的方法
 smallPath ='/Users/guopeng/Documents/panoramio/smalls/'
 tinyPath ='/Users/guopeng/Documents/panoramio/tinis/'
@@ -286,7 +274,7 @@ def getPhotoInfo(desCell ,tnrect ,path ,halfsize ,zoom):
     #     left =256 -halfsize *2 -1
     # if top +halfsize *2 >256:
     #     top =256 -halfsize *2 -1
-    return [url ,desCell.cphoto.lt ,desCell.cphoto.ln ,nelt ,neln ,swlt ,swln ,left ,top ,halfsize ,desCell.cphoto.testid ,desCell.cphoto.oriscore]
+    return [url ,desCell.cphoto.lt ,desCell.cphoto.ln ,nelt ,neln ,swlt ,swln ,left ,top ,halfsize ,desCell.cphoto.testid ,desCell.cphoto.oriscore ,desCell.cphoto.photoid]
 
 def makeRect(zoom ,tilex ,tiley):
     bound =math.pow(2 ,zoom)
@@ -296,8 +284,9 @@ def makeRect(zoom ,tilex ,tiley):
     bottom =(tiley +1)*256/bound
     return ltlnrect(py2lt(top) ,py2lt(bottom) ,px2ln(right) ,px2ln(left))
 
+#针对tile的主查询函数！
 def getTilePhoto(rootCell ,zoom ,tilex ,tiley ,photoList):
-    #找到该tile对应的cell
+    #找到包含该tile的最小cell，如果该tile对应的cell有元素那么即该cell，否则为上层有元素的cell，但该cell的图片未必落在指定tile上
     theCell =rootCell.findCell(tilex ,tiley ,zoom)
     theRect =theCell.tnrect
     if theCell.deep !=zoom:
@@ -308,7 +297,7 @@ def getTilePhoto(rootCell ,zoom ,tilex ,tiley ,photoList):
     if theRect.ptInRect(theCell.cphoto.lt ,theCell.cphoto.ln):
         theList.append(theCell)
     theParent =theCell.parent
-    while(theParent):
+    while theParent:
         if theRect.ptInRect(theParent.cphoto.lt ,theParent.cphoto.ln):
             theList.append(theParent)
         theParent =theParent.parent
@@ -323,8 +312,21 @@ def getTilePhoto(rootCell ,zoom ,tilex ,tiley ,photoList):
             photoList.append(getPhotoInfo(x ,theRect ,tinyPath ,tinyhalfsize ,zoom))
 
 
-
-
+#用于返回一切非标准cell区域内zoom +3以上所有图片
+#代码与getTilePhoto相当一致
+def choosePhotos(rootCell ,nelt, swlt ,neln ,swln ,zoom ,photoList):
+    theRect =ltlnrect(nelt, swlt ,neln ,swln)
+    theCell =rootCell.findFitCell(theRect)
+    theList =[theCell]
+    theParent =theCell.parent
+    while theParent:
+        theList.append(theParent)
+        theParent =theParent.parent
+    theList.reverse()
+    theCell.getAllCell(zoom +3 ,theList)
+    for x in theList:
+        if theRect.ptInRect(x.cphoto.lt ,x.cphoto.ln):
+            photoList.append([x.cphoto.photoid ,x.cphoto.testid ,x.cphoto.oriscore ,x.cphoto.lt ,x.cphoto.ln])
 
 
 

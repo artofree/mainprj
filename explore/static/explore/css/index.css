@@ -3,27 +3,27 @@
     padding: 0;
 }
 
-html, body{
+html, body {
     height: 100%;
     overflow: hidden;
 }
 
 #explore-index-maindiv {
-    border-style:solid;
-    border-width: 1px;
-    border-color: #ffff00;
-
     height: 100%;
-    margin-top: 45px;
+    padding-top: 50px;
 }
 
-
-#map-canvas{
-    border-style: solid;
-    border-width: 1px;
-    border-color: #ffff00;
-
+#map-canvas {
+    float: left;
+    width: 100px;
     height: 100%;
+    min-height: 500px;
     margin: 0px;
     padding: 0px
+}
+
+#rightdiv {
+    float: right;
+    height: 100%;
+    padding: 20px;
 }

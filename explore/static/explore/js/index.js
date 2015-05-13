@@ -1,3 +1,4 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///关于快速zoom bug可用计时器，在zoom之后设定计时器，同时设定地图的minzoom和maxzoom，既禁止缩放，过期后再恢复正常
 ///关于不用eventsource的方案：gettiles时请求tilesinfo，服务端收到请求即计算，然后将照片缓存到stringio
 var map;
@@ -12,6 +13,10 @@ var infowindow = null;
 var allLayer = [];
 ///右侧图片
 var rightPhotos = [];
+///info是否打开
+var isInfoWindow = false;
+///用于确认infowindow由map还是右侧发起打开
+var isInfoRightClick = false;
 
 function getNormalizedCoord(coord, zoom) {
     var y = coord.y;
@@ -120,6 +125,11 @@ function initialize() {
             mapTypeIds: ['moon']
         }
     };
+    infowindow = new google.maps.InfoWindow();
+    ///关闭infowindow：
+    google.maps.event.addListener(infowindow, 'closeclick', function () {
+        isInfoRightClick = false;
+    });
     allLayer[parms.zoom] = [];
     map = new google.maps.Map(document.getElementById('map-canvas'),
         mapOptions);
@@ -133,19 +143,19 @@ function initialize() {
     ///监听鼠标点击，从nowphoto里获得并呈现
     google.maps.event.addListener(map, 'click', function (event) {
         if (nowPhoto) {
-            if (infowindow) {
+            if (isInfoWindow) {
                 infowindow.close();
             }
             var imgscr = '/static/photos/' + nowPhoto["photoid"] + '.jpg';
-            infowindow = new google.maps.InfoWindow({
-                content: '<img src="' + imgscr + '" width="256" height="256" />',
-                position: nowPhoto["point"]
-            });
+            infowindow.setContent('<img src="' + imgscr + '" width="256" height="256" />');
+            infowindow.setPosition(nowPhoto["point"]);
             infowindow.open(map);
+            isInfoWindow =true;
+            isInfoRightClick = false;
         } else {
-            if (infowindow) {
+            if (isInfoWindow) {
                 infowindow.close();
-                infowindow = null;
+                isInfoWindow = false;
             }
         }
     });
@@ -203,9 +213,15 @@ function initialize() {
         }, function (ret) {
             //返回值 ret 在这里是一个列表
             rightPhotos = ret;
-            var i =0;
+            if (isInfoWindow && isInfoRightClick) {
+                var i = 0;
+            }
+            else {
+                initFun();
+            }
         })
     });
+
 
     ///存储状态
     google.maps.event.addListener(map, 'tilesloaded', function () {
@@ -236,4 +252,131 @@ window.addEventListener('popstate', function (e) {
         isNeedHistory = false;
     }
 }, false);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+var minleftwidth = 5;
+var comrightwidth = 500;
+var safeblank = 10;
+var rightpadding = 20;
+var tabheight = 50;
+var navheight = 50;
+var navtopmargin = 100;
+
+var loop = 0;
+var isLastLoop = false;
+function loopFun(theLoop){
+    var rightWidth;
+    var leftWidth;
+    var width = $(window).width();
+    var thumbdiv = $("#thumbdiv");
+    thumbdiv.empty();
+    if (width > comrightwidth + safeblank + minleftwidth) {
+        rightWidth = comrightwidth - 2 * rightpadding;
+        leftWidth = width - comrightwidth - safeblank;
+    }
+    if (width <= comrightwidth + safeblank + minleftwidth) {
+        leftWidth = minleftwidth;
+        rightWidth = width - safeblank - minleftwidth - 2 * rightpadding;
+    }
+    $("#map-canvas").width(leftWidth);
+    var rightdiv = $("#rightdiv");
+    rightdiv.width(rightWidth);
+    $("#tabdiv").height(tabheight);
+    var navdiv = $("#navdiv");
+    navdiv.height(navheight);
+    thumbdiv.height(rightdiv.height() - tabheight - navheight - navtopmargin);
+
+    ///计算图片元素个数
+    var theHeight = thumbdiv.height();
+    var theWidth = thumbdiv.width();
+    ///可容图片数
+    var theCount = Math.floor(theHeight / 110) * Math.floor(theWidth / 110);
+    ///实际图片数
+    var realCount =theCount;
+    ///设置图片
+    isLastLoop = false;
+    if (rightPhotos.length -theLoop *theCount< theCount) {
+        realCount = rightPhotos.length -theLoop *theCount;
+        isLastLoop = true;
+    }
+    for (var index = theLoop *theCount; index < theLoop *theCount +realCount; index++) {
+        var imgscr = '/static/smalls/' + rightPhotos[index][1] + '.jpg';
+        var pid = rightPhotos[index][0];
+        var fileid = rightPhotos[index][1];
+        var lt = rightPhotos[index][3];
+        var ln = rightPhotos[index][4];
+        thumbdiv.append('<div style="float: left ;height: 114px ;width: 114px">' +
+        '<a href="#" class="thePhoto" pid="' + pid + '" fileid ="' + fileid + '" lt="' + lt + '" ln="' + ln + '">' +
+        '<img src="' + imgscr + '" style="width: 100px ;height: 100px ;background: rgb(255, 255, 255); ">' +
+        '</a>' +
+        '</div>');
+    }
+    ///设置翻页
+    var backdiv =$("#backdiv");
+    backdiv.empty();
+    if(isLastLoop){
+        backdiv.append('<h4 style="color: grey">下一页》》</h4>');
+    }
+    else{
+        backdiv.append('<a href="#" id="backloop"><h4>下一页》》</h4></a>');
+    }
+    var frontdiv =$("#frontdiv");
+    frontdiv.empty();
+    if(theLoop ==0){
+        frontdiv.append('<h4 style="color: grey">《《上一页</h4>');
+    }
+    else{
+        frontdiv.append('<a href="#" id="frontloop"><h4>《《上一页</h4></a>');
+    }
+}
+
+function initFun() {
+    loop =0;
+    loopFun(loop);
+}
+
+
+$(document).ready(function () {
+    $(window).resize(function () {
+        initFun();
+    });
+});
+
+$(document).ready(function () {
+    initFun();
+});
+
+$(document).ready(function () {
+    $(document).on("click", ".thePhoto", function () {
+        var pid = $(this).attr("pid");
+        var fileid = $(this).attr("fileid");
+        var lt = $(this).attr("lt");
+        var ln = $(this).attr("ln");
+
+        if (isInfoWindow) {
+            infowindow.close();
+        }
+        var imgscr = '/static/photos/' + fileid + '.jpg';
+        infowindow.setContent('<img src="' + imgscr + '" width="256" height="256" />');
+        infowindow.setPosition(new google.maps.LatLng(Number(lt), Number(ln)));
+        infowindow.open(map);
+        isInfoWindow =true;
+        isInfoRightClick = true;
+    });
+});
+
+///frontloop
+$(document).ready(function () {
+    $(document).on("click", "#frontloop", function () {
+        loop -=1;
+        loopFun(loop);
+    });
+});
+///backloop
+$(document).ready(function () {
+    $(document).on("click", "#backloop", function () {
+        loop +=1;
+        loopFun(loop);
+    });
+});
 

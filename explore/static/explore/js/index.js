@@ -17,6 +17,9 @@ var rightPhotos = [];
 var isInfoWindow = false;
 ///用于确认infowindow由map还是右侧发起打开
 var isInfoRightClick = false;
+///like和favorite的图标
+var imgLike;
+var imgFavorite;
 
 function getNormalizedCoord(coord, zoom) {
     var y = coord.y;
@@ -50,7 +53,6 @@ CoordMapType.prototype.getTile = function (coord, zoom, ownerDocument) {
     var div = ownerDocument.createElement('div');
     var theUrl = '/photolayer/' + zoom + ',' + normalizedCoord.x + ',' + normalizedCoord.y + '.jpg';
     div.innerHTML = '<img src="' + theUrl + '" width="256" height="256" />';
-    //div.innerHTML = '<img src="/static/test.png" width="256" height="256" />';
     div.style.borderStyle = 'hidden';
 
     ///如果alllayer里没有这个tile
@@ -346,6 +348,7 @@ $(document).ready(function () {
     initFun();
 });
 
+
 $(document).ready(function () {
     $(document).on("click", ".thePhoto", function () {
         var pid = $(this).attr("pid");
@@ -356,8 +359,31 @@ $(document).ready(function () {
         if (isInfoWindow) {
             infowindow.close();
         }
+        ///初始化like以及favorite
         var imgscr = '/static/photos/' + fileid + '.jpg';
-        infowindow.setContent('<img src="' + imgscr + '" width="256" height="256" />');
+
+        $.get(parms.genurl,{'reqType':'isLike','photoId':pid}, function(ret){
+            if(ret =='0'){
+                imgLike ='/static/icons/heart_red_24.png';
+            }else{
+                imgLike ='/static/icons/heart_grey_24.png';
+            }
+        });
+        $.get(parms.genurl,{'reqType':'isFavorite','photoId':pid}, function(ret){
+            if(ret =='0'){
+                imgFavorite ='/static/icons/star_red_24.png';
+            }else{
+                imgFavorite ='/static/icons/star_grey_24.png';
+            }
+        });
+        var theContent ='<div style="width: 192px">'+
+                '<img src="'+imgscr +'" style="height: 192px;width: 192px">'+
+                '<div style="height: 30px;margin-top: 10px">'+
+                '<img src="'+imgLike +'" id="imgLike" style="cursor: pointer;float: left;margin-left: 30px">'+
+                '<img src="'+imgFavorite +'" id="imgFavorite" style="cursor: pointer;float: right;margin-right: 20px">'+
+                '</div></div>';
+
+        infowindow.setContent(theContent);
         infowindow.setPosition(new google.maps.LatLng(Number(lt), Number(ln)));
         infowindow.open(map);
         isInfoWindow =true;

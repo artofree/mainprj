@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Django settings for mainprj project.
 
@@ -7,6 +8,7 @@ https://docs.djangoproject.com/en/1.7/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.7/ref/settings/
 """
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
@@ -37,6 +39,8 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.gis',
+    'registration',
+    'registration_email',
     'main',
     'explore',
 )
@@ -104,3 +108,6 @@ CACHES = {
         'LOCATION': '127.0.0.1:11211',
     }
 }
+
+#用户登录
+SESSION_EXPIRE_AT_BROWSER_CLOSE =True

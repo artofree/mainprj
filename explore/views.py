@@ -137,6 +137,9 @@ def getPhotoList(request):
     photoList.sort(key=lambda col:(col[2]))
     return JsonResponse(photoList ,safe=False)
 
+#通用请求
+def genRequest(request):
+    return HttpResponse('0')
 
 
 

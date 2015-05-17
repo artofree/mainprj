@@ -1,4 +1,4 @@
-{% extends "navbase.html" %}
+{% extends "base.html" %}
 {% load staticfiles %}
 {% block title %}探索{% endblock %}
 
@@ -14,6 +14,7 @@
     parms["sw"] =0;
     parms["jsonurl"] ="{% url 'explore:getPhotoInfo' %}";
     parms["plisturl"] ="{% url 'explore:getPhotoList' %}";
+    parms["genurl"] ="{% url 'explore:genRequest' %}";
 </script>
 <script src="{% static 'explore/js/index.js' %}"></script>
 {% endblock %}

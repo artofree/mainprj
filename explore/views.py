@@ -4,22 +4,18 @@ from django.shortcuts import render
 from django.http import HttpResponse ,HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.http import JsonResponse
-from main.models import userinfo ,photo
+from main.models import Userinfo ,Photo ,Views ,Likes ,Favorites
 import utility.photoDistribute as pd
 from PIL import Image
-try:
-    import cStringIO as StringIO
-except ImportError: # 导入失败会捕获到ImportError
-    import StringIO
+from io import BytesIO as StringIO
+from django.utils import timezone
 import json
-import thread
-streamLock = thread.allocate_lock()
 
 #初始化全球图片树
 photoSet =set()
-rootCell =pd.cell(pd.ltlnrect(0 ,0 ,0 ,0 ,0) ,pd.cellphoto(photo.objects.get(id=1)) ,None)
+rootCell =pd.cell(pd.ltlnrect(0 ,0 ,0 ,0 ,0) ,pd.cellphoto(Photo.objects.get(id=1)) ,None)
 photoSet.add(1)
-for x in photo.objects.all():
+for x in Photo.objects.all():
     if x.id not in photoSet:
         photoSet.add(x.id)
         rootCell.addphoto(pd.cellphoto(x))
@@ -45,9 +41,11 @@ def rdrct(request):
     return HttpResponseRedirect(reverse('explore:index', args=('43.648614,104.68,5',)))
 
 tilesContentInfo =dict()
-blankStream =StringIO.StringIO()
+
+blankStream =StringIO()
 blankTile = Image.new('RGBA', (256 ,256) ,(0 ,0 ,0 ,0))
 blankTile.save(blankStream ,"PNG")
+
 allTileImages =[blankStream]
 
 #获得tile里的cell图片信息
@@ -56,7 +54,7 @@ def getPhotoInfo(request):
     tilex =request.GET['x']
     tiley =request.GET['y']
     strKey =zoom +',' +tilex  +',' +tiley
-    if not tilesContentInfo.has_key(strKey):
+    if not strKey in tilesContentInfo:
         makeContent(zoom ,tilex ,tiley)
     theTileInfo =tilesContentInfo[strKey]
     if theTileInfo[0] ==0:
@@ -76,7 +74,7 @@ def getPhotoInfo(request):
 #获得tile整合图片本身
 def getphotolayer(request ,zoom ,tilex ,tiley):
     strKey =zoom +',' +tilex  +',' +tiley
-    if not tilesContentInfo.has_key(strKey):
+    if not strKey in tilesContentInfo:
         makeContent(zoom ,tilex ,tiley)
     theTileInfo =tilesContentInfo[strKey]
     theIo =allTileImages[theTileInfo[0]]
@@ -98,7 +96,7 @@ def makeContent(zoom ,tilex ,tiley):
         im = Image.open(thePhoto[0])
         theTile.paste(im ,(thePhoto[7] ,thePhoto[8] ,thePhoto[7] +2*thePhoto[9] ,thePhoto[8] +2*thePhoto[9]))
 
-    theStream =StringIO.StringIO()
+    theStream =StringIO()
     theTile.save(theStream ,"PNG")
     allTileImages.append(theStream)
     theLen =len(allTileImages)
@@ -134,12 +132,43 @@ def getPhotoList(request):
     else:
         pd.choosePhotos(rootCell ,nelt ,swlt ,neln ,swln ,zoom ,photoList)
 
-    photoList.sort(key=lambda col:(col[2]))
+    photoList.sort(key=lambda col:(col[2]) ,reverse=True)
     return JsonResponse(photoList ,safe=False)
 
 #通用请求
 def genRequest(request):
-    return HttpResponse('0')
+    if not request.user.is_authenticated():
+        return render(request, 'main/login.html')
+
+    ret =''
+    reqType =request.GET['reqType']
+    pid =request.GET['pid']
+    photo =Photo.objects.get(pk=pid)
+    if reqType =='addLike':
+        if not photo.likes.filter(user =request.user):
+            like =Likes(point =photo ,user=request.user ,time =timezone.now())
+            like.save()
+    elif reqType =='addFavorite':
+        if not photo.favorites.filter(user =request.user):
+            favorite =Favorites(point =photo ,user=request.user ,time =timezone.now())
+            favorite.save()
+    elif reqType =='isLike':
+        if photo.likes.filter(user =request.user):
+            ret ='1'
+        else:
+            ret ='0'
+    elif reqType =='isFavorite':
+        if photo.favorites.filter(user =request.user):
+            ret ='1'
+        else:
+            ret ='0'
+    elif reqType =='likeCount':
+        ret =str(photo.likes.count())
+    elif reqType =='favoriteCount':
+        ret =str(photo.favorites.count())
+
+    return HttpResponse(ret)
+
 
 
 

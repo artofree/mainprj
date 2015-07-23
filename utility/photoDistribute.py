@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import math
-from coordChange import ln2px ,lt2py ,px2ln ,py2lt ,ltperpx ,lnperpx
+from utility.coordChange import ln2px ,lt2py ,px2ln ,py2lt ,ltperpx ,lnperpx
 
 class tilesInfo(object):
     def __init__(self ,infoList):
@@ -68,7 +68,7 @@ class ltlnrect(object):
 class cellphoto(object):
     def __init__(self ,photo):
         self.photoid =photo.id
-        self.oriscore =photo.comments *10 +photo.favorites *5 +photo.likes *2
+        self.oriscore =photo.tcomments *10 +photo.tfavorites *5 +photo.tlikes *2
         self.lt =photo.lt
         self.ln =photo.ln
         self.testid =photo.testid
@@ -244,8 +244,8 @@ def selectPhotos(rootCell ,nelt, swlt ,neln ,swln ,zoom):
 #tiles的方法
 smallPath ='/Users/guopeng/Documents/panoramio/smalls/'
 tinyPath ='/Users/guopeng/Documents/panoramio/tinis/'
-smallhalfsize =32
-tinyhalfsize =8
+smallhalfsize =28
+tinyhalfsize =6
 
 def getPhotoInfo(desCell ,tnrect ,path ,halfsize ,zoom):
     url =path +str(desCell.cphoto.testid) +'.jpg'

@@ -39,8 +39,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.gis',
-    'registration',
-    'registration_email',
     'main',
     'explore',
 )

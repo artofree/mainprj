@@ -1,4 +1,7 @@
 /* 针对搜索框长度 */
+body{
+    background-color:rgb(233,233,233);
+}
 nav .form-control {
     background: 0;
     min-width: 300px;

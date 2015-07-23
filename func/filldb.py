@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from django.contrib.auth.models import User
-from main.models import userinfo ,photo
+from main.models import Userinfo ,Photo
 import datetime
 from django.utils import timezone
 import os, sys
@@ -31,26 +31,21 @@ def createphoto():
     for x in resultList:
         theDict[x[0]] =x
     photoList =[os.path.splitext(x)[0] for x in os.listdir(photoPath)]
-    photoList =photoList[:1000]
     for x in photoList:
-        if theDict.has_key(x):
+        if x in theDict:
             #写数据库:
             photoInfo =theDict[x]
             theUser = User.objects.get(pk=1)
-            thePhoto =photo()
+            thePhoto =Photo()
             thePhoto.testid =photoInfo[0]
             thePhoto.user =theUser
-            thePhoto.file ="1"
-            thePhoto.filename ="1"
             thePhoto.lt =float(photoInfo[4])
-            thePhoto.ltc =photoInfo[5]
             thePhoto.ln =float(photoInfo[6])
-            thePhoto.lnc =photoInfo[7]
             thePhoto.lable =1
-            thePhoto.looks =photoInfo[12]
-            thePhoto.likes =photoInfo[13]
-            thePhoto.favorites =photoInfo[14]
-            thePhoto.comments =photoInfo[15]
+            thePhoto.tlooks =photoInfo[12]
+            thePhoto.tlikes =photoInfo[13]
+            thePhoto.tfavorites =photoInfo[14]
+            thePhoto.tcomments =photoInfo[15]
             thePhoto.save()
 
 

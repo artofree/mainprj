@@ -17,9 +17,7 @@ var rightPhotos = [];
 var isInfoWindow = false;
 ///用于确认infowindow由map还是右侧发起打开
 var isInfoRightClick = false;
-///like和favorite的图标
-var imgLike;
-var imgFavorite;
+
 
 function getNormalizedCoord(coord, zoom) {
     var y = coord.y;
@@ -43,6 +41,49 @@ function getNormalizedCoord(coord, zoom) {
         x: x,
         y: y
     };
+}
+
+function getInfoWindowContent(pid, pfile) {
+    ///初始化like以及favorite
+    var imgscr = '/static/photos/' + pfile + '.jpg';
+
+    $.get(parms.genurl, {'reqType': 'isLike', 'pid': pid}, function (ret) {
+        if (ret == '0') {
+            $("#likeCount").attr('isLike', '0');
+            $("#imgLike").attr('src', '/static/icons/heart_grey_16.png');
+        } else {
+            $("#likeCount").attr('isLike', '1');
+            $("#imgLike").attr('src', '/static/icons/heart_red_16.png');
+        }
+    });
+    $.get(parms.genurl, {'reqType': 'isFavorite', 'pid': pid}, function (ret) {
+        if (ret == '0') {
+            $("#favoriteCount").attr('isFavorite', '0');
+            $("#imgFavorite").attr('src', '/static/icons/star_grey_16.png');
+        } else {
+            $("#favoriteCount").attr('isFavorite', '1');
+            $("#imgFavorite").attr('src', '/static/icons/star_red_16.png');
+        }
+    });
+    $.get(parms.genurl, {'reqType': 'likeCount', 'pid': pid}, function (ret) {
+        $("#likeCount").html(ret);
+    });
+    $.get(parms.genurl, {'reqType': 'favoriteCount', 'pid': pid}, function (ret) {
+        $("#favoriteCount").html(ret);
+    });
+
+    var content = '<div style="width: 192px">' +
+        '<img class="img-rounded" src="' + imgscr + '" style="height: 192px;width: 192px">' +
+        '<div style="height: 30px;margin-top: 20px">' +
+        '<div id="likediv" style="float: left;margin-left: 1px"><span>喜欢 </span>' +
+        '<img src="" id="imgLike" style="cursor: pointer;"> ' +
+        '<span id="likeCount" isLike="0" pid="' + pid + '"></span></div>' +
+        '<div id="favoritediv" style="float: right;margin-right: 1px"><span>收藏 </span>' +
+        '<img src="" id="imgFavorite" style="cursor: pointer;"> ' +
+        '<span id="favoriteCount" isFavorite="0" pid="' + pid + '"></span></div>' +
+        '</div></div>';
+
+    return content;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////
 function CoordMapType(tileSize) {
@@ -86,8 +127,8 @@ CoordMapType.prototype.getTile = function (coord, zoom, ownerDocument) {
             var elements = ret["elements"];
             for (var i = 0; i < elements.length; i++) {
                 var theElement = [];
-                theElement["photoid"] = elements[i][0];
-                theElement["id"] = elements[i][7];
+                theElement["pfile"] = elements[i][0];
+                theElement["pid"] = elements[i][7];
                 var nepoint = new google.maps.LatLng(Number(elements[i][1]), Number(elements[i][2]));
                 var swpoint = new google.maps.LatLng(Number(elements[i][3]), Number(elements[i][4]));
                 theElement["rect"] = new google.maps.LatLngBounds(swpoint, nepoint);
@@ -148,11 +189,11 @@ function initialize() {
             if (isInfoWindow) {
                 infowindow.close();
             }
-            var imgscr = '/static/photos/' + nowPhoto["photoid"] + '.jpg';
-            infowindow.setContent('<img src="' + imgscr + '" width="256" height="256" />');
+            theContent = getInfoWindowContent(nowPhoto["pid"], nowPhoto["pfile"]);
+            infowindow.setContent(theContent);
             infowindow.setPosition(nowPhoto["point"]);
             infowindow.open(map);
-            isInfoWindow =true;
+            isInfoWindow = true;
             isInfoRightClick = false;
         } else {
             if (isInfoWindow) {
@@ -180,7 +221,8 @@ function initialize() {
                     if (theTile[index]["rect"].contains(event.latLng)) {
                         nowPhoto = [];
                         nowPhoto["point"] = theTile[index]["point"];
-                        nowPhoto["photoid"] = theTile[index]["photoid"];
+                        nowPhoto["pfile"] = theTile[index]["pfile"];
+                        nowPhoto["pid"] = theTile[index]["pid"];
                         isInTiles = true;
                         break;
                     }
@@ -262,11 +304,11 @@ var safeblank = 10;
 var rightpadding = 20;
 var tabheight = 50;
 var navheight = 50;
-var navtopmargin = 100;
+var navtopmargin = 50;
 
 var loop = 0;
 var isLastLoop = false;
-function loopFun(theLoop){
+function loopFun(theLoop) {
     var rightWidth;
     var leftWidth;
     var width = $(window).width();
@@ -294,46 +336,46 @@ function loopFun(theLoop){
     ///可容图片数
     var theCount = Math.floor(theHeight / 110) * Math.floor(theWidth / 110);
     ///实际图片数
-    var realCount =theCount;
+    var realCount = theCount;
     ///设置图片
     isLastLoop = false;
-    if (rightPhotos.length -theLoop *theCount< theCount) {
-        realCount = rightPhotos.length -theLoop *theCount;
+    if (rightPhotos.length - theLoop * theCount < theCount) {
+        realCount = rightPhotos.length - theLoop * theCount;
         isLastLoop = true;
     }
-    for (var index = theLoop *theCount; index < theLoop *theCount +realCount; index++) {
-        var imgscr = '/static/smalls/' + rightPhotos[index][1] + '.jpg';
+    for (var index = theLoop * theCount; index < theLoop * theCount + realCount; index++) {
+        var imgscr = '/static/photos/' + rightPhotos[index][1] + '.jpg';
         var pid = rightPhotos[index][0];
-        var fileid = rightPhotos[index][1];
+        var pfile = rightPhotos[index][1];
         var lt = rightPhotos[index][3];
         var ln = rightPhotos[index][4];
         thumbdiv.append('<div style="float: left ;height: 114px ;width: 114px">' +
-        '<a href="#" class="thePhoto" pid="' + pid + '" fileid ="' + fileid + '" lt="' + lt + '" ln="' + ln + '">' +
-        '<img src="' + imgscr + '" style="width: 100px ;height: 100px ;background: rgb(255, 255, 255); ">' +
+        '<a href="#" class="thePhoto" pid="' + pid + '" pfile ="' + pfile + '" lt="' + lt + '" ln="' + ln + '">' +
+        '<img class="img-thumbnail" src="' + imgscr + '" style="width: 100px ;height: 100px ;background: rgb(255, 255, 255); ">' +
         '</a>' +
         '</div>');
     }
     ///设置翻页
-    var backdiv =$("#backdiv");
+    var backdiv = $("#backdiv");
     backdiv.empty();
-    if(isLastLoop){
-        backdiv.append('<h4 style="color: grey">下一页》》</h4>');
+    if (isLastLoop) {
+        backdiv.append('<h5 style="color: grey">下一页<span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span></h5>');
     }
-    else{
-        backdiv.append('<a href="#" id="backloop"><h4>下一页》》</h4></a>');
+    else {
+        backdiv.append('<a href="#" id="backloop"><h5>下一页<span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span></h5></a>');
     }
-    var frontdiv =$("#frontdiv");
+    var frontdiv = $("#frontdiv");
     frontdiv.empty();
-    if(theLoop ==0){
-        frontdiv.append('<h4 style="color: grey">《《上一页</h4>');
+    if (theLoop == 0) {
+        frontdiv.append('<h5 style="color: grey"><span class="glyphicon glyphicon-triangle-left" aria-hidden="true"></span>上一页</h5>');
     }
-    else{
-        frontdiv.append('<a href="#" id="frontloop"><h4>《《上一页</h4></a>');
+    else {
+        frontdiv.append('<a href="#" id="frontloop"><h5><span class="glyphicon glyphicon-triangle-left" aria-hidden="true"></span>上一页</h5></a>');
     }
 }
 
 function initFun() {
-    loop =0;
+    loop = 0;
     loopFun(loop);
 }
 
@@ -348,45 +390,22 @@ $(document).ready(function () {
     initFun();
 });
 
-
+///
 $(document).ready(function () {
     $(document).on("click", ".thePhoto", function () {
         var pid = $(this).attr("pid");
-        var fileid = $(this).attr("fileid");
+        var pfile = $(this).attr("pfile");
         var lt = $(this).attr("lt");
         var ln = $(this).attr("ln");
 
         if (isInfoWindow) {
             infowindow.close();
         }
-        ///初始化like以及favorite
-        var imgscr = '/static/photos/' + fileid + '.jpg';
-
-        $.get(parms.genurl,{'reqType':'isLike','photoId':pid}, function(ret){
-            if(ret =='0'){
-                imgLike ='/static/icons/heart_red_24.png';
-            }else{
-                imgLike ='/static/icons/heart_grey_24.png';
-            }
-        });
-        $.get(parms.genurl,{'reqType':'isFavorite','photoId':pid}, function(ret){
-            if(ret =='0'){
-                imgFavorite ='/static/icons/star_red_24.png';
-            }else{
-                imgFavorite ='/static/icons/star_grey_24.png';
-            }
-        });
-        var theContent ='<div style="width: 192px">'+
-                '<img src="'+imgscr +'" style="height: 192px;width: 192px">'+
-                '<div style="height: 30px;margin-top: 10px">'+
-                '<img src="'+imgLike +'" id="imgLike" style="cursor: pointer;float: left;margin-left: 30px">'+
-                '<img src="'+imgFavorite +'" id="imgFavorite" style="cursor: pointer;float: right;margin-right: 20px">'+
-                '</div></div>';
-
+        theContent = getInfoWindowContent(pid, pfile);
         infowindow.setContent(theContent);
         infowindow.setPosition(new google.maps.LatLng(Number(lt), Number(ln)));
         infowindow.open(map);
-        isInfoWindow =true;
+        isInfoWindow = true;
         isInfoRightClick = true;
     });
 });
@@ -394,15 +413,48 @@ $(document).ready(function () {
 ///frontloop
 $(document).ready(function () {
     $(document).on("click", "#frontloop", function () {
-        loop -=1;
+        loop -= 1;
         loopFun(loop);
     });
 });
 ///backloop
 $(document).ready(function () {
     $(document).on("click", "#backloop", function () {
-        loop +=1;
+        loop += 1;
         loopFun(loop);
     });
 });
+///
+$(document).ready(function () {
+    $(document).on("click", "#imgLike", function () {
+        var jlikeCount = $("#likeCount");
+        if (jlikeCount.attr('isLike') == '1') {
+            alert('您已点赞');
+        }
+        else {
+            var likeCount = jlikeCount.html();
+            jlikeCount.html(Number(likeCount) + 1);
+            jlikeCount.attr('isLike', '1');
+            $("#imgLike").attr('src', '/static/icons/heart_red_16.png');
+            $.get(parms.genurl, {'reqType': 'addLike', 'pid': jlikeCount.attr('pid')}, function (ret) {
+            });
+        }
+    });
+});
 
+$(document).ready(function () {
+    $(document).on("click", "#imgFavorite", function () {
+        var jfavoriteCount = $("#favoriteCount");
+        if (jfavoriteCount.attr('isFavorite') == '1') {
+            alert('您已收藏');
+        }
+        else {
+            var favoriteCount = jfavoriteCount.html();
+            jfavoriteCount.html(Number(favoriteCount) + 1);
+            jfavoriteCount.attr('isFavorite', '1');
+            $("#imgFavorite").attr('src', '/static/icons/star_red_16.png');
+            $.get(parms.genurl, {'reqType': 'addFavorite', 'pid': jfavoriteCount.attr('pid')}, function (ret) {
+            });
+        }
+    });
+});
